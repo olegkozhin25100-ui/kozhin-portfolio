@@ -1,0 +1,41 @@
+'use strict';
+const cards = [...document.querySelectorAll('.work')];
+const filters = [...document.querySelectorAll('.filter')];
+const archive = document.querySelector('#show-all');
+const counter = document.querySelector('#work-count');
+let category = 'all';
+let expanded = false;
+function renderWorks() {
+  const matches = cards.filter(card => category === 'all' || card.dataset.category === category);
+  cards.forEach(card => { card.hidden = !matches.includes(card) || (category === 'all' && !expanded && matches.indexOf(card) >= 6); });
+  const visible = cards.filter(card => !card.hidden).length;
+  counter.textContent = `ПОКАЗАНО / ${String(visible).padStart(2, '0')} ИЗ ${String(matches.length).padStart(2, '0')}`;
+  archive.hidden = category !== 'all';
+  archive.setAttribute('aria-expanded', String(expanded));
+  archive.innerHTML = expanded ? 'Свернуть архив <span aria-hidden="true">−</span>' : 'Посмотреть весь архив <span aria-hidden="true">＋</span>';
+  filters.forEach(button => { const active = button.dataset.filter === category; button.classList.toggle('active', active); button.setAttribute('aria-pressed', String(active)); });
+}
+filters.forEach(button => button.addEventListener('click', () => { category = button.dataset.filter; renderWorks(); }));
+archive.addEventListener('click', () => { expanded = !expanded; renderWorks(); if (!expanded) document.querySelector('#works').scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'}); });
+renderWorks();
+const dialog = document.querySelector('#player');
+const video = document.querySelector('#video-player');
+const error = document.querySelector('#video-error');
+let opener;
+document.querySelectorAll('.work-image').forEach(link => link.addEventListener('click', event => {
+  if (!dialog.showModal || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+  event.preventDefault(); opener = link;
+  document.querySelector('#player-title').textContent = link.dataset.title;
+  document.querySelector('#direct-video').href = link.href;
+  error.hidden = true;
+  video.poster = link.querySelector('img').src;
+  video.src = link.href;
+  dialog.showModal(); document.body.classList.add('modal-open');
+  document.querySelector('#close-player').focus();
+  video.play().catch(() => { /* Native controls remain available if playback needs another gesture. */ });
+}));
+video.addEventListener('error', () => { error.hidden = false; });
+document.querySelector('#close-player').addEventListener('click', () => dialog.close());
+dialog.addEventListener('click', event => { const box = dialog.getBoundingClientRect(); if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) dialog.close(); });
+dialog.addEventListener('close', () => { video.pause(); video.removeAttribute('src'); video.load(); document.body.classList.remove('modal-open'); opener?.focus(); });
+document.querySelector('#year').textContent = new Date().getFullYear();
